@@ -22,7 +22,7 @@ int mic_tcp_socket(start_mode sm)
 int mic_tcp_bind(int socket, mic_tcp_sock_addr addr)
 {
    printf("[MIC-TCP] Appel de la fonction: ");  printf(__FUNCTION__); printf("\n");
-   return -1;
+   return 0;
 }
 
 /*
@@ -49,10 +49,25 @@ int mic_tcp_connect(int socket, mic_tcp_sock_addr addr)
  * Permet de réclamer l’envoi d’une donnée applicative
  * Retourne la taille des données envoyées, et -1 en cas d'erreur
  */
+
 int mic_tcp_send (int mic_sock, char* mesg, int mesg_size)
 {
+    
     printf("[MIC-TCP] Appel de la fonction: "); printf(__FUNCTION__); printf("\n");
-    return -1;
+
+    int result =-1;
+    
+
+    mic_tcp_pdu PDU;
+    PDU.header.source_port = htons(API_CS_Port);
+    PDU.header.dest_port = htons(API_CS_Port);
+    PDU.payload.size = mesg_size;
+    PDU.payload.data = mesg;
+    
+    result = IP_send(PDU, );
+
+
+    return result;
 }
 
 /*
