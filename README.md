@@ -2,7 +2,7 @@
 ## TPs BE Reseau - 3 MIC
 
 
-###TAGS : v1 -> Version 1 de mictcp
+TAGS : v1 -> Version 1 de mictcp
 
 
 Les détails du sujet du BE est accessible depuis le cours "Programmation Système et Réseau" sur moodle.
