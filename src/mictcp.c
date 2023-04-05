@@ -1,12 +1,20 @@
 #include <mictcp.h>
 #include <api/mictcp_core.h>
-
+#define TOLERANCE 10
 
 //Declaration socket
 mic_tcp_sock socket_m ;
 
 //Init numero ack reception et envoi
 int num_seq_send = 0, num_seq_rec = 0;
+
+
+int tolerance_perte = TOLERANCE; //-> tous les combien de paquets on accepte la perte
+//compteur fenentre pour fiabilité partielle
+int compteur = TOLERANCE; 
+
+
+int perte = 0, envoi =0;
 
 /*
  * Permet de créer un socket entre l’application et MIC-TCP
@@ -72,6 +80,9 @@ int mic_tcp_connect(int socket, mic_tcp_sock_addr addr)
  * Permet de réclamer l’envoi d’une donnée applicative
  * Retourne la taille des données envoyées, et -1 en cas d'erreur
  */
+
+
+
 int mic_tcp_send (int mic_sock, char* mesg, int mesg_size)
 {
     printf("[MIC-TCP] Appel de la fonction: "); printf(__FUNCTION__); printf("\n");
@@ -91,9 +102,12 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size)
     
     pdu.payload.data=mesg;
     pdu.payload.size=mesg_size;
-    //int nb_transmission_max = 0;
+    
 
-    while (result==-1 ){
+    
+    
+
+    while (result==-1){
         //on envoie le message
         if (IP_send(pdu,addr_dest)==-1) printf("Erreur de IP_send, ligne :%d\n",__LINE__);
         
@@ -107,6 +121,25 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size)
 
         if(result!=-1 && pdu_recu.header.ack_num!=num_seq_send){ //si on a reçu un packet mais c'est pas le bon ack
             result = -1;
+        }
+
+        //int nb_transmiss_max = 2, nb_transmiss = 0;
+
+        if (result==-1 ){//si on a une perte de paquet, on ajoute aussi un nb de transmissions max pour un paquet
+            //nb_transmiss++;
+            if (compteur==tolerance_perte){
+                compteur =0;
+                result = 0;
+                printf("Perte toléré\n");
+            }
+        }else{//sinon on augmente le compteur si il est en dessous de tolerance
+            
+            if(compteur<tolerance_perte){
+                compteur++;
+                //printf("Bien reçu, on incrémente le compteur\n");
+            } else if(compteur==tolerance_perte){
+                printf("On est prets a tolerer\n");
+            }
         }
         //sinon alors on est bon et on peut sortir de la boucle
     }
