@@ -18,7 +18,7 @@ int mic_tcp_socket(start_mode sm)
 
     printf("[MIC-TCP] Appel de la fonction: ");  printf(__FUNCTION__); printf("\n");
     if (initialize_components(sm)==-1 ) return result; /* Appel obligatoire */
-    set_loss_rate(3);
+    set_loss_rate(10);
 
     mic_tcp_sock sock;
     sock.fd = 0;
@@ -79,7 +79,12 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size)
     mic_tcp_pdu pdu;
     pdu.header.seq_num = num_seq_send; //On met le numero de sequence
     mic_tcp_sock_addr addr_dest = socket_m.addr; 
+    addr_dest.ip_addr = "localhost";
+    addr_dest.ip_addr_size = strlen(addr_dest.ip_addr) +1;
+    addr_dest.port = htons(API_CS_Port);
 
+    pdu.header.dest_port = htons(API_CS_Port);
+    pdu.header.source_port = htons(API_CS_Port);
     
     pdu.header.dest_port = socket_m.addr.port;
     //pdu.header.source_port = 1234;//Pourt ou on envoie l'ack dans processpdu
@@ -88,38 +93,26 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size)
     pdu.payload.size=mesg_size;
     //int nb_transmission_max = 0;
 
-    while (result==-1 ){//&& nb_transmission_max<10
+    while (result==-1 ){
         //on envoie le message
         if (IP_send(pdu,addr_dest)==-1) printf("Erreur de IP_send, ligne :%d\n",__LINE__);
         
-        unsigned long timer = 1000; //Le temps qu'on attends avant de renvoyer un message
+        unsigned long timer = 10; //Le temps qu'on attends avant de renvoyer un message
 
-        //mic_tcp_pdu* pdu_recu = malloc(sizeof(mic_tcp_pdu));
-        //mic_tcp_sock_addr* addr_autre = malloc(sizeof(mic_tcp_sock_addr));
 
         mic_tcp_pdu pdu_recu;
         mic_tcp_sock_addr addr_autre;
 
         result = IP_recv(&pdu_recu,&addr_autre,timer);
 
-        if(result!=-1){ //si on a reçu un packet
-            if (pdu_recu.header.ack){//si c'est un acquittement
-                if(pdu_recu.header.ack_num!=num_seq_send){ //si c'est pas le bon acquittement
-                    result = -1;
-                }
-                printf("Ack recu\n");
-            }else{//si ce n'est pas un paquet d'acquittement
-                result = -1;
-                printf("Pas paquet ack\n");
-            }
-
-        }else{
-            printf("Ack non recu\n");
+        if(result!=-1 && pdu_recu.header.ack_num!=num_seq_send){ //si on a reçu un packet mais c'est pas le bon ack
+            result = -1;
         }
         //sinon alors on est bon et on peut sortir de la boucle
-        //nb_transmission_max++;
     }
+    //incrémentation du num de sequence
     num_seq_send = (num_seq_send+1)%2;
+    
     
 
 
@@ -132,8 +125,7 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size)
  * Retourne le nombre d’octets lu ou bien -1 en cas d’erreur
  * NB : cette fonction fait appel à la fonction app_buffer_get()
  */
-int mic_tcp_recv (int socket, char* mesg, int max_mesg_size)
-{
+int mic_tcp_recv (int socket, char* mesg, int max_mesg_size){
     printf("[MIC-TCP] Appel de la fonction: "); printf(__FUNCTION__); printf("\n");
     int result = -1 ;
     //retrouver socket ici socket_m
@@ -176,28 +168,31 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_sock_addr addr)
 {
     printf("[MIC-TCP] Appel de la fonction: "); printf(__FUNCTION__); printf("\n");
 
-    mic_tcp_header header =pdu.header; 
-    mic_tcp_payload payload = pdu.payload;
+    
+    
 
     //Check ack num du paquet reçu est correct
-    if (header.seq_num ==num_seq_rec){
-        app_buffer_put(payload);
-        //creation d'un ack a envoyer
-        mic_tcp_pdu pduack;
-        mic_tcp_sock_addr addr_dest = addr; 
-        //pduack.header.dest_port = pdu.header.source_port;
-        pduack.header.ack = 1; //On active flag d'acquittement pour dire que c'est un ack
-        pduack.header.ack_num = num_seq_rec; //On met numero qu'on acquitte
-
-        pduack.payload.data="";
-        pduack.payload.size=0;
+    if (pdu.header.seq_num ==num_seq_rec){
         
-        IP_send(pduack,addr_dest); // Envoi ack
-
+        app_buffer_put(pdu.payload);
         num_seq_rec = (num_seq_rec+1)%2; //Incréméntation num ack
+        
     }
 
-    //Si c'est pas le bon numéro on ne fait rien
+    //creation d'un ack a envoyer
+    mic_tcp_pdu pduack;
+    
+    pduack.payload.data="";
+    pduack.payload.size=0;
+
+    pduack.header.ack_num = pdu.header.seq_num;
+
+    pduack.header.dest_port = htons(API_CS_Port);
+    pduack.header.source_port = htons(API_CS_Port);
+    
+    IP_send(pduack,addr); // Envoi ack
+    
+
     
 
 }
