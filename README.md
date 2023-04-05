@@ -3,6 +3,8 @@
 
 
 TAGS : v1 -> Version 1 de mictcp
+       v2 -> Version 2 de mictcp
+       v3 -> Version 3 de mictcp
 
 
 Les détails du sujet du BE est accessible depuis le cours "Programmation Système et Réseau" sur moodle.
