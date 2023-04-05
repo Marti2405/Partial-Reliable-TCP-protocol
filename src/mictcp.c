@@ -1,6 +1,6 @@
 #include <mictcp.h>
 #include <api/mictcp_core.h>
-#define TOLERANCE 10
+#define TOLERANCE 5
 
 //Declaration socket
 mic_tcp_sock socket_m ;
@@ -14,7 +14,7 @@ int tolerance_perte = TOLERANCE; //-> tous les combien de paquets on accepte la 
 int compteur = TOLERANCE; 
 
 
-int perte = 0, envoi =0;
+
 
 /*
  * Permet de créer un socket entre l’application et MIC-TCP
@@ -123,14 +123,17 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size)
             result = -1;
         }
 
-        //int nb_transmiss_max = 2, nb_transmiss = 0;
+        
 
-        if (result==-1 ){//si on a une perte de paquet, on ajoute aussi un nb de transmissions max pour un paquet
-            //nb_transmiss++;
+        if (result==-1 ){//si on a une perte de paquet
+            
             if (compteur==tolerance_perte){
                 compteur =0;
                 result = 0;
-                printf("Perte toléré\n");
+                printf("Perte tolérée\n");
+                num_seq_send = (num_seq_send+1)%2;
+            } else {
+                printf("Perte non tolérée\n");
             }
         }else{//sinon on augmente le compteur si il est en dessous de tolerance
             
@@ -223,7 +226,7 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_sock_addr addr)
     pduack.header.dest_port = htons(API_CS_Port);
     pduack.header.source_port = htons(API_CS_Port);
     
-    IP_send(pduack,addr); // Envoi ack
+    if (IP_send(pduack,addr) == -1) printf("Erreur send ack\n"); // Envoi ack
     
 
     
