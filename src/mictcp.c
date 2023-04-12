@@ -6,7 +6,7 @@
 mic_tcp_sock socket_m ;
 
 //Init numero ack reception et envoi
-int num_seq_send = 0, num_seq_rec = 0;
+int num_seq_send , num_seq_rec ,connecok=-1;
 
 
 int tolerance_perte = TOLERANCE; //-> tous les combien de paquets on accepte la perte
@@ -62,7 +62,17 @@ int mic_tcp_bind(int socket, mic_tcp_sock_addr addr)
  */
 int mic_tcp_accept(int socket, mic_tcp_sock_addr* addr)
 {
-    printf("[MIC-TCP] Appel de la fonction: ");  printf(__FUNCTION__); printf("\n");
+    
+    int result = -1;
+
+    while (result==-1){
+        if (connecok == 1){
+            result = 0;
+        }
+        sleep(0.2);
+    }
+    printf("Connexion aceptee\n");
+
     return 0;
 }
 
@@ -71,9 +81,80 @@ int mic_tcp_accept(int socket, mic_tcp_sock_addr* addr)
  * Retourne 0 si la connexion est établie, et -1 en cas d’échec
  */
 int mic_tcp_connect(int socket, mic_tcp_sock_addr addr)
-{
-    printf("[MIC-TCP] Appel de la fonction: ");  printf(__FUNCTION__); printf("\n");
+{   
+
+    mic_tcp_pdu pdu_recu;
+    mic_tcp_sock_addr addr_autre;
+
+    num_seq_send = 0;
+
+    //creation d'un Syn a envoyer
+    mic_tcp_pdu pdusyn;
+
+    
+    pdusyn.payload.data="";
+    pdusyn.payload.size=0;
+
+    pdusyn.header.ack_num = num_seq_send; 
+    pdusyn.header.seq_num = 0;
+    pdusyn.header.syn = 1;
+    pdusyn.header.ack = 0;
+    
+
+    pdusyn.header.dest_port = htons(API_CS_Port);
+    pdusyn.header.source_port = htons(API_CS_Port);
+    
+
+    
+    int result = -1;
+
+    sleep(1);
+
+    while (result==-1){
+        //on envoie le message
+        if (IP_send(pdusyn,addr) == -1) printf("Erreur send ack\n"); // Envoi syn
+        printf("Syn envoyé\n");
+
+
+        unsigned long timer = 500; //Le temps qu'on attends avant de renvoyer un message
+
+
+        
+
+        result = IP_recv(&pdu_recu,&addr_autre,timer); //reception du syn+ack
+
+        if (result!=-1){ //si on a reçu 
+
+            
+            if(pdu_recu.header.seq_num!=0 && pdu_recu.header.ack_num==(num_seq_send+1)%2){//si on a pas reçu le bon ack
+                result = -1;
+            }else {
+                printf("Synack reçu\n");
+            }
+
+        }
+  
+    }
+
+    
+    //creation d'un Ack a envoyer
+    
+    
+    pdusyn.payload.data="";
+    pdusyn.payload.size=0;
+
+    pdusyn.header.ack_num = pdu_recu.header.ack_num; 
+    pdusyn.header.seq_num = pdu_recu.header.seq_num+1;
+    pdusyn.header.ack = 1;
+
+    pdusyn.header.dest_port = htons(API_CS_Port);
+    pdusyn.header.source_port = htons(API_CS_Port);
+    
+    if (IP_send(pdusyn,addr) == -1) printf("Erreur send ack\n"); // Envoi ack
+
+
     return 0;
+
 }
 
 /*
@@ -146,8 +227,7 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size)
         }
         //sinon alors on est bon et on peut sortir de la boucle
     }
-    //incrémentation du num de sequence
-    num_seq_send = (num_seq_send+1)%2;
+    
     
     
 
@@ -205,28 +285,67 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_sock_addr addr)
     printf("[MIC-TCP] Appel de la fonction: "); printf(__FUNCTION__); printf("\n");
 
     
-    
+    if (pdu.header.syn==1 && pdu.header.ack==0){
 
-    //Check ack num du paquet reçu est correct
-    if (pdu.header.seq_num ==num_seq_rec){
+        printf("Syn reçu\n");
+
+
+        //creation d'un Syn+Ack a envoyer
+        mic_tcp_pdu pdusynack;
+
         
-        app_buffer_put(pdu.payload);
-        num_seq_rec = (num_seq_rec+1)%2; //Incréméntation num ack
+        pdusynack.payload.data="";
+        pdusynack.payload.size=0;
+
+
+        pdusynack.header.dest_port = htons(API_CS_Port);
+        pdusynack.header.source_port = htons(API_CS_Port);
         
+
+        pdusynack.header.ack_num = pdu.header.ack_num+1; 
+        pdusynack.header.seq_num = pdu.header.seq_num;
+        pdusynack.header.ack = 1;
+        pdusynack.header.syn = 1;
+
+        //Convention pour commencer par le numero d'ack reçu
+        num_seq_rec = pdu.header.ack_num;
+
+        
+        //envoi synAck
+        if (IP_send(pdusynack,addr) == -1) printf("Erreur send Synack\n"); 
+        printf("SynAck envoyé\n");
+
+        connecok = 1;
+        
+
+        
+        
+        
+
+    }else{
+        //Check ack num du paquet reçu est correct
+        if (pdu.header.seq_num ==num_seq_rec){
+            
+            app_buffer_put(pdu.payload);
+            num_seq_rec = (num_seq_rec+1)%2; //Incréméntation num ack
+            
+        }
+
+        //creation d'un ack a envoyer
+        mic_tcp_pdu pduack;
+
+        pduack.payload.data="";
+        pduack.payload.size=0;
+
+        pduack.header.ack_num = pdu.header.seq_num;
+
+        pduack.header.dest_port = htons(API_CS_Port);
+        pduack.header.source_port = htons(API_CS_Port);
+
+        if (IP_send(pduack,addr) == -1) printf("Erreur send ack\n"); // Envoi ack
     }
 
-    //creation d'un ack a envoyer
-    mic_tcp_pdu pduack;
     
-    pduack.payload.data="";
-    pduack.payload.size=0;
-
-    pduack.header.ack_num = pdu.header.seq_num;
-
-    pduack.header.dest_port = htons(API_CS_Port);
-    pduack.header.source_port = htons(API_CS_Port);
-    
-    if (IP_send(pduack,addr) == -1) printf("Erreur send ack\n"); // Envoi ack
     
 
     
