@@ -18,4 +18,5 @@ TESTS :
 - Vous pouvez modifier la tolérance pour la fiabilité partielle en haut du fichier mictcp.c dans le dossier src
 - Vous pouvez modifier le loss rate dans la fonction mic_tcp_socket en haut du fichier mictcp.c dans le dossier src
 
-##EXPLICATIONS : Vous pouvez trouver les explications de nos implémentations dans le fichier "Explication BE Reseau.pdf" présent sur ce repo Github
+EXPLICATIONS : 
+- Vous pouvez trouver les explications de nos implémentations dans le fichier "Explication BE Reseau.pdf" présent sur ce repo Github
