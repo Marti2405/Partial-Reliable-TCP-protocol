@@ -7,12 +7,13 @@ TAGS :
 - v2 -> Version 2 de mictcp
 - v3 -> Version 3 de mictcp
 
-TESTS :
-compiler -> make
-Test de la version texte : Machine 1 : ./tsock_texte -t mictcp -p
-			   Machine 2 : ./tsock_texte -t mictcp -s
-Test de la version video : Machine 1 : ./tsock_video -t mictcp -p
-			   Machine 2 : ./tsock_video -t mictcp -s
+TESTS : 
+- compiler -> make
+- Test de la version texte : - Machine 1 : ./tsock_texte -t mictcp -p
+			     - Machine 2 : ./tsock_texte -t mictcp -s
+- Test de la version video : - Machine 1 : ./tsock_video -t mictcp -p
+			     - Machine 2 : ./tsock_video -t mictcp -s
+(Remarque : Veuillez utiliser la vidéo Wildlife au lieu de Starwars pour les tests vidéo)			  
 
 
 Les détails du sujet du BE est accessible depuis le cours "Programmation Système et Réseau" sur moodle.
