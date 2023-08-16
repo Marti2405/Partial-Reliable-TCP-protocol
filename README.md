@@ -1,4 +1,4 @@
-# BE RESEAU
+# Enhancing TCP Protocol with Partial Reliability using Sliding Window
 This repository contains the C code for implementing the TCP protocol with partial reliability, featuring a sliding window and a tolerance mechanism for packet loss. The primary implementation is located in the "src/mictcp.c" file.
 
 ## Introduction
@@ -26,4 +26,4 @@ The goal of this project is to enhance the traditional TCP protocol with partial
 
 ## Authors:
 - Marti JIMENEZ
-- Thibault GAUTHERON
+- Hugo GIRARD
